@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from seclog.config import load_config
-from seclog.inference import predict
+from seclog.inference import predict, predict_text
 from seclog.training import run_training
 
 
@@ -29,3 +29,23 @@ def test_smoke_prediction_preserves_test_ids(tmp_path: Path) -> None:
     test_ids = pd.read_csv("tests/fixtures/synthetic_data/test.csv")["id"].tolist()
     assert output["id"].tolist() == test_ids
     assert (tmp_path / "submission.csv").exists()
+    demo = predict_text(
+        ["request started", "attempt timed out", "retry scheduled"],
+        [item.path for item in training.checkpoints],
+        config,
+        "cpu",
+    )
+    assert 0.0 <= demo["confidence"] <= 1.0
+    assert demo["primary_anomaly_type"] in {
+        "none",
+        "timeout_retry",
+        "resource_exhaustion",
+        "slow_burn_warning",
+        "state_conflict",
+        "parameter_drift",
+        "out_of_order",
+        "missing_step",
+        "duplicate_event",
+        "cross_component_mismatch",
+        "partial_recovery_loop",
+    }

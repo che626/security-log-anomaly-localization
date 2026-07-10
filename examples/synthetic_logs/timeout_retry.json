@@ -1,0 +1,9 @@
+{
+  "name": "Timeout followed by retry",
+  "lines": [
+    "request accepted",
+    "remote operation timed out",
+    "retry scheduled after backoff",
+    "request completed"
+  ]
+}

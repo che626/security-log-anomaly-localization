@@ -7,9 +7,9 @@ import pandas as pd
 import torch
 
 from .config import ProjectConfig
-from .constants import ANOMALY_TYPES
+from .constants import ANOMALY_TYPES, GLOBAL_NONE_ID, TYPE_TO_ID
 from .data import Sample
-from .decode import decode_logits_to_frame
+from .decode import decode_logits_to_frame, decode_single_item, stable_softmax
 from .features import encode_log_line, nonempty_log_lines
 from .model import LogBoundaryNetwork
 from .schemas import SchemaError, validate_prediction_frame, validate_test_frame
@@ -129,3 +129,50 @@ def predict(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output.to_csv(output_path, index=False, encoding="utf-8", lineterminator="\n")
     return output
+
+
+def predict_text(
+    lines: list[str],
+    checkpoint_paths: list[Path],
+    config: ProjectConfig,
+    device_name: str = "auto",
+) -> dict[str, Any]:
+    clean_lines = [str(line).strip() for line in lines if str(line).strip()]
+    if not clean_lines:
+        raise ValueError("at least one non-empty log line is required")
+    if not checkpoint_paths:
+        raise ValueError("at least one checkpoint path is required")
+    sample = Sample(
+        sid=0,
+        lines=clean_lines,
+        token_ids=[
+            encode_log_line(
+                line,
+                vocab_size=config.model.vocab_size,
+                max_tokens=config.features.max_tokens,
+            )
+            for line in clean_lines
+        ],
+    )
+    device = choose_torch_device(device_name)
+    loader = build_dataloader([sample], batch_size=1, pin_memory=device.type == "cuda")
+    fold_predictions = [
+        collect_model_outputs(
+            load_checkpoint_model(checkpoint_path, config, device), loader, device
+        )[sample.sid]
+        for checkpoint_path in checkpoint_paths
+    ]
+    prediction = average_logits(fold_predictions)
+    _validate_finite({sample.sid: prediction})
+    decoded = decode_single_item(
+        prediction,
+        n_lines=len(clean_lines),
+        params=config.decoder,
+        length_stats={},
+    )
+    global_probabilities = stable_softmax(prediction["global"][None, :])[0]
+    anomaly_type = str(decoded["primary_anomaly_type"])
+    confidence_index = (
+        GLOBAL_NONE_ID if anomaly_type == "none" else TYPE_TO_ID[anomaly_type]
+    )
+    return {**decoded, "confidence": float(global_probabilities[confidence_index])}

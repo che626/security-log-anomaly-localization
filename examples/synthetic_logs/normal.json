@@ -1,0 +1,9 @@
+{
+  "name": "Normal worker lifecycle",
+  "lines": [
+    "service boot completed",
+    "configuration loaded",
+    "worker registered",
+    "health check passed"
+  ]
+}
