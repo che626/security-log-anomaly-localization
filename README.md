@@ -1,5 +1,82 @@
 # Security Log Anomaly Localization
 
-Multi-task system-log anomaly detection, span localization, and anomaly-type
-classification. Full portfolio documentation is added after implementation and
-verification.
+一个可复现的多任务系统日志异常检测作品集：同时判断日志序列是否异常、定位异常闭区间，并识别异常类型。
+
+项目源自我以个人队伍 `che` 参加 ISCC 2026 数据安全赛的系统日志题。官方最终名单排名为 **277**，未获得奖项；该题官方 B 榜得分为 **0.87111**。比赛期间选定方案的历史 OOF 为 **0.9794512565**，但解码参数使用过同一批 OOF 预测进行选择，因此它是历史、非锁定估计，不能与官方 B 榜成绩等同。
+
+## 为什么重做这个项目
+
+比赛原始代码是围绕短期提交构建的单文件实验，混有多版数据、缓存和参数。这个仓库将其中最有代表性的系统日志方案重构为可测试、可审计、可演示的工程：
+
+- 对每行日志执行确定性归一化和 CRC32 哈希特征提取；
+- 使用 `EmbeddingBag + CNN + BiGRU` 共享编码器；
+- 联合训练 BIO 序列标签、起点、终点和全局异常类型四个目标；
+- 通过受约束 Viterbi、端点辅助和边界修正生成结构化结果；
+- 用数据哈希、模板组切分、检查点元数据和发布审计降低版本混淆与泄漏风险。
+
+## 结果应该怎样解读
+
+| 指标 | 数值 | 含义 |
+|---|---:|---|
+| ISCC 2026 系统日志题官方 B 榜 | 0.87111 | 官方外部榜单成绩 |
+| 比赛期间选定方案 OOF | 0.9794512565 | 历史、非锁定；解码器在 OOF 上选择过参数 |
+| 仓库锁定复现 | 运行后生成 | 仅在匹配私有数据清单时记录，不预填结果 |
+
+历史 OOF 与官方成绩存在明显差距，可能来自数据分布变化、近重复样本、解码器调参偏差和 A/B 数据版本管理问题。仓库不掩盖这个差距，而是把它作为数据审计和评估设计的一部分。详见 [实验记录](docs/experiments.md) 与 [误差分析](docs/error-analysis.md)。
+
+## 快速开始
+
+要求 Python 3.10 或 3.11。
+
+```bash
+python -m pip install -e ".[dev,demo]"
+pytest -q
+seclog check-data \
+  --train tests/fixtures/synthetic_data/train.csv \
+  --test tests/fixtures/synthetic_data/test.csv
+```
+
+用完全虚构的合成数据执行两折 CPU 冒烟训练：
+
+```bash
+seclog train \
+  --data-dir tests/fixtures/synthetic_data \
+  --config configs/smoke.yaml \
+  --output-dir .private/smoke-run \
+  --device cpu
+```
+
+所有数据路径都必须显式传入。程序不会搜索父目录，也不会自动读取比赛归档。
+
+## 本地演示
+
+没有私有检查点时，页面仍可浏览合成示例，并明确显示模型不可用状态：
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+如需在本机连接自己的折模型，设置 `SECLOG_CHECKPOINTS`；多个路径使用操作系统路径分隔符连接。可用 `SECLOG_CONFIG` 指向匹配的配置文件。输入只作为文本处理，限制为 400 行和 200,000 个字符，不会被执行。
+
+## 仓库结构
+
+```text
+src/seclog/        数据结构、特征、模型、解码、训练、推理与评估
+configs/           历史选定配置和 CPU 冒烟配置
+tests/             单元、集成和真实反向传播冒烟测试
+examples/          完全虚构的公开日志示例
+app/               本地 Streamlit 展示层
+scripts/           私有清单、锁定复现和发布安全审计
+artifacts/metrics/ 仅包含小型、可核对的指标元数据
+docs/              架构、实验、误差、模型卡和比赛复盘
+```
+
+## 公开边界与限制
+
+- 不发布 ISCC 数据、原始日志、比赛检查点、参赛者标识或平台提交文件。
+- 合成示例不是比赛数据的改写，不含真实 IP、凭据、姓名或机构信息。
+- 当前模型不是生产级安全检测器，置信度未经校准，不能用于自动处置安全事件。
+- 模板组切分降低近重复泄漏风险，但不能证明对新系统、新日志格式或新攻击模式的泛化能力。
+- MIT 许可证仅覆盖本仓库代码，不授予任何比赛数据、第三方数据或模型权重的权利。
+
+进一步阅读：[架构](docs/architecture.md) · [模型卡](docs/model-card.md) · [ISCC 四题复盘](docs/iscc-2026-retrospective.md) · [简历与面试材料](docs/resume-and-interview.md)
