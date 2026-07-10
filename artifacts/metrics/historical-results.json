@@ -1,0 +1,13 @@
+{
+  "official_b_leaderboard": {
+    "score": 0.87111,
+    "source": "ISCC 2026 final score table"
+  },
+  "historical_competition_oof": {
+    "detect_f1": 1.0,
+    "iou": 0.9604749303490352,
+    "type_f1": 0.9977536895161062,
+    "score": 0.9794512565051547,
+    "warning": "Decoder parameters were selected using OOF predictions; this is not a locked estimate."
+  }
+}
