@@ -1,0 +1,10 @@
+[
+  {
+    "raw": "2026-05-01 12:34:56 Host 10.0.0.7 read /var/log/app 0xAF seg-9 count=42",
+    "clean": "host <ip> read <path> <hex> <seg> count=<num>"
+  },
+  {
+    "raw": "   ",
+    "clean": ""
+  }
+]
