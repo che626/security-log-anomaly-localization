@@ -1,0 +1,25 @@
+id,log_text,has_anomaly,primary_start_idx,primary_end_idx,primary_anomaly_type,all_spans
+1,"service boot completed
+worker ready",0,-1,-1,none,""
+2,"scheduler initialized
+queue empty",0,-1,-1,none,""
+3,"storage mounted
+health check passed",0,-1,-1,none,""
+4,"configuration loaded
+listener started",0,-1,-1,none,""
+5,"request started
+attempt timed out
+retry scheduled
+request completed",1,1,2,timeout_retry,"1|2|timeout_retry"
+6,"job accepted
+deadline exceeded
+retry queued
+job resumed",1,1,2,timeout_retry,"1|2|timeout_retry"
+7,"worker started
+memory usage critical
+allocation failed
+worker stopped",1,1,2,resource_exhaustion,"1|2|resource_exhaustion"
+8,"batch opened
+descriptor pool exhausted
+new handles rejected
+batch aborted",1,1,2,resource_exhaustion,"1|2|resource_exhaustion"

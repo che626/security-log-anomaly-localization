@@ -1,0 +1,6 @@
+id,log_text
+101,"service boot completed
+worker ready"
+102,"request started
+attempt timed out
+retry scheduled"
