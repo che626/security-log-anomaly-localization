@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "dataset": {
+    "train_sha256": "d554ef549dc924c028cbf0b64b51e078e6a4cbd4f31783d71e7e3f23b9aa47ed",
+    "test_sha256": "e0a6d221c2c286c5b02c5a851d556f71a6491222eaee93250d899c316c6a0f11",
+    "train_rows": 20000,
+    "test_rows": 5000
+  },
+  "model": {
+    "vocab_size": 262144,
+    "emb_dim": 128,
+    "hidden": 176,
+    "layers": 1,
+    "dropout": 0.24,
+    "max_tokens": 64,
+    "seed": 999,
+    "folds": 5
+  },
+  "split": {
+    "locked_seed": 20260711,
+    "template_groups": 20000,
+    "duplicate_groups": 0,
+    "largest_group": 1,
+    "decoder_tuning_rows": 15999,
+    "locked_evaluation_rows": 4001
+  },
+  "prediction_source": {
+    "kind": "verified_legacy_oof",
+    "oof_sha256": "94d61a29ab3388f9e1d473d8fdd253258718c0183a299ff47bc11e263c81bc64",
+    "run_args_sha256": "ae9c150a994e7f07723ea7fde3363c2ac4a09e12219d8b15f2d8c8f2879b752b",
+    "validation": "Run arguments, sample IDs, line counts, output heads, tensor shapes and finite values were checked before decoding."
+  },
+  "limitations": [
+    "Competition data and checkpoints are not distributed.",
+    "This run reused historical OOF logits instead of retraining five folds.",
+    "The locked partition isolates decoder selection, not end-to-end model training."
+  ]
+}

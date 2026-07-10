@@ -1,7 +1,12 @@
 import pandas as pd
 import pytest
 
-from seclog.schemas import SchemaError, validate_prediction_frame, validate_training_frame
+from seclog.schemas import (
+    SchemaError,
+    validate_prediction_frame,
+    validate_test_frame,
+    validate_training_frame,
+)
 
 
 def valid_training_frame() -> pd.DataFrame:
@@ -41,3 +46,14 @@ def test_prediction_schema_rejects_invalid_normal_span() -> None:
     )
     with pytest.raises(SchemaError, match="-1"):
         validate_prediction_frame(frame, expected_ids=[1])
+
+
+def test_test_schema_rejects_empty_frame() -> None:
+    frame = pd.DataFrame({"id": pd.Series(dtype=int), "log_text": pd.Series(dtype=str)})
+    with pytest.raises(SchemaError, match="empty"):
+        validate_test_frame(frame)
+
+
+def test_training_schema_rejects_missing_columns() -> None:
+    with pytest.raises(SchemaError, match="missing columns"):
+        validate_training_frame(pd.DataFrame({"id": [1]}))

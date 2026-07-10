@@ -9,5 +9,14 @@
     "type_f1": 0.9977536895161062,
     "score": 0.9794512565051547,
     "warning": "Decoder parameters were selected using OOF predictions; this is not a locked estimate."
+  },
+  "locked_decoder_evaluation_on_verified_legacy_oof": {
+    "detect_f1": 1.0,
+    "iou": 0.9588109329548771,
+    "type_f1": 0.9968556634242637,
+    "score": 0.9783049486759308,
+    "decoder_tuning_rows": 15999,
+    "locked_evaluation_rows": 4001,
+    "warning": "Decoder selection is locked, but reused OOF models may train on other locked-partition rows; this is not a fully locked end-to-end estimate."
   }
 }

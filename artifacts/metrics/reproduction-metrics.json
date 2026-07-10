@@ -1,0 +1,29 @@
+{
+  "evaluation_name": "locked_decoder_evaluation_on_verified_legacy_oof",
+  "detect_f1": 1.0,
+  "iou": 0.9588109329548771,
+  "type_f1": 0.9968556634242637,
+  "score": 0.9783049486759308,
+  "decoder_tuning_rows": 15999,
+  "locked_evaluation_rows": 4001,
+  "prediction_distribution": {
+    "has_anomaly": {
+      "0": 1760,
+      "1": 2241
+    },
+    "primary_anomaly_type": {
+      "none": 1760,
+      "timeout_retry": 314,
+      "resource_exhaustion": 274,
+      "state_conflict": 238,
+      "cross_component_mismatch": 235,
+      "slow_burn_warning": 227,
+      "missing_step": 220,
+      "out_of_order": 214,
+      "partial_recovery_loop": 184,
+      "duplicate_event": 174,
+      "parameter_drift": 161
+    }
+  },
+  "warning": "This locks decoder selection only. The reused fold OOF models may have trained on other rows assigned to the decoder-locked partition; this is not a fully locked end-to-end estimate."
+}

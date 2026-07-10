@@ -26,6 +26,7 @@ The repository does not establish that the private competition data represents r
 
 - Official system-log B leaderboard: `0.87111`.
 - Selected historical, non-locked OOF: `0.9794512565`; decoder parameters were selected using OOF predictions.
+- Locked decoder evaluation on verified historical OOF: `0.9783049487`; this isolates decoder selection only and is not a fully locked end-to-end estimate.
 - Public synthetic tests: behavioral correctness and CPU pipeline execution, not a meaningful accuracy benchmark.
 
 Detection macro F1 receives 15%, inclusive span IoU 50%, and anomaly-type macro F1 35% in the composite implementation.
