@@ -1,0 +1,36 @@
+model:
+  vocab_size: 512
+  emb_dim: 8
+  hidden: 16
+  layers: 1
+  dropout: 0.0
+features:
+  max_tokens: 16
+training:
+  seed: 7
+  seeds: [7]
+  folds: 2
+  epochs: 1
+  batch_size: 4
+  eval_batch_size: 4
+  learning_rate: 0.001
+  weight_decay: 0.0
+  o_weight: 0.16
+  boundary_loss_weight: 0.20
+  global_loss_weight: 0.12
+  patience: 1
+decoder:
+  anomaly_bias: 0.0
+  min_conf: 0.0
+  bridge_gap: 0
+  edge_prob: 0.10
+  switch_penalty: -1.8
+  continue_bonus: 0.20
+  min_len: 1
+  hard_max_len: 18
+  long_span_conf: 0.60
+  primary_strategy: earliest
+  refine_radius: 0
+  use_boundary_candidates: false
+  fallback_global_boundary: false
+  post_adjust_mode: none

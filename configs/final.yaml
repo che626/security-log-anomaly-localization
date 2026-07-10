@@ -1,0 +1,43 @@
+model:
+  vocab_size: 262144
+  emb_dim: 128
+  hidden: 176
+  layers: 1
+  dropout: 0.24
+features:
+  max_tokens: 64
+training:
+  seed: 999
+  seeds: [999]
+  folds: 5
+  epochs: 5
+  batch_size: 48
+  eval_batch_size: 64
+  learning_rate: 0.0018
+  weight_decay: 0.0001
+  o_weight: 0.16
+  boundary_loss_weight: 0.20
+  global_loss_weight: 0.12
+  patience: 2
+decoder:
+  anomaly_bias: -0.25
+  min_conf: 0.35
+  bridge_gap: 1
+  edge_prob: 0.10
+  switch_penalty: -1.8
+  continue_bonus: 0.20
+  min_len: 1
+  hard_max_len: 18
+  long_span_conf: 0.58
+  primary_strategy: earliest_score
+  refine_radius: 1
+  boundary_weight: 0.45
+  global_weight: 0.10
+  length_weight: 0.08
+  use_boundary_candidates: false
+  post_adjust_mode: short_expand
+  post_short_max_len: 2
+  post_short_max_conf: 1.01
+  post_neighbor_support: 0.0
+  post_expand_left: 0
+  post_expand_right: 1
