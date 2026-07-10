@@ -54,6 +54,10 @@ seclog train \
 
 没有私有检查点时，页面仍可浏览合成示例，并明确显示模型不可用状态：
 
+![Local Streamlit demo using fabricated logs and smoke checkpoints](docs/assets/demo.png)
+
+截图使用完全虚构的日志和仅训练一轮的 smoke 检查点，用于展示交互与区间高亮，不代表模型准确率。
+
 ```bash
 streamlit run app/streamlit_app.py
 ```
