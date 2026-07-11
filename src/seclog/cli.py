@@ -9,7 +9,13 @@ from .data import sha256_file
 from .inference import predict
 from .metrics import evaluate_predictions
 from .public_baselines import BASELINE_NAMES, run_baseline
-from .public_data import prepare_bgl, prepare_hdfs, prepare_openstack, prepare_thunderbird
+from .public_data import (
+    prepare_bgl,
+    prepare_hdfs,
+    prepare_openstack,
+    prepare_openstack_raw,
+    prepare_thunderbird,
+)
 from .public_metrics import evaluate_sequence_predictions, evaluate_span_predictions
 from .public_protocol import TaskProfile, read_manifest, read_prepared_dataset, sha256_file as public_sha256
 from .public_reporting import (
@@ -99,20 +105,29 @@ def _evaluate(args: argparse.Namespace) -> None:
 
 def _public_prepare(args: argparse.Namespace) -> None:
     if args.dataset == "hdfs":
-        if args.labels is None:
-            raise ValueError("HDFS preparation requires --labels")
+        if args.logs is None or args.labels is None:
+            raise ValueError("HDFS preparation requires --logs and --labels")
         paths = prepare_hdfs(args.logs, args.labels, args.output_dir)
     elif args.dataset == "openstack":
         if args.labels is None:
             raise ValueError("OpenStack preparation requires --labels")
-        columns = {
-            "group_column": args.group_column,
-            "message_column": args.message_column,
-            "label_group_column": args.label_group_column,
-            "label_column": args.label_column,
-        }
-        paths = prepare_openstack(args.logs, args.labels, args.output_dir, **columns)
+        if args.abnormal_log is not None or args.normal_log:
+            if args.abnormal_log is None or not args.normal_log:
+                raise ValueError("OpenStack raw preparation requires --abnormal-log and --normal-log")
+            paths = prepare_openstack_raw(args.normal_log, args.abnormal_log, args.labels, args.output_dir)
+        else:
+            if args.logs is None:
+                raise ValueError("grouped-CSV OpenStack preparation requires --logs")
+            columns = {
+                "group_column": args.group_column,
+                "message_column": args.message_column,
+                "label_group_column": args.label_group_column,
+                "label_column": args.label_column,
+            }
+            paths = prepare_openstack(args.logs, args.labels, args.output_dir, **columns)
     elif args.dataset == "bgl":
+        if args.logs is None:
+            raise ValueError("BGL preparation requires --logs")
         paths = prepare_bgl(
             args.logs,
             args.output_dir,
@@ -121,8 +136,8 @@ def _public_prepare(args: argparse.Namespace) -> None:
             max_source_lines=args.max_source_lines,
         )
     elif args.dataset == "thunderbird":
-        if args.max_source_lines is None:
-            raise ValueError("Thunderbird preparation requires --max-source-lines")
+        if args.logs is None or args.max_source_lines is None:
+            raise ValueError("Thunderbird preparation requires --logs and --max-source-lines")
         paths = prepare_thunderbird(
             args.logs,
             args.output_dir,
@@ -291,8 +306,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     public_prepare = commands.add_parser("public-prepare", help="prepare a local public Loghub dataset")
     public_prepare.add_argument("--dataset", choices=("hdfs", "openstack", "bgl", "thunderbird"), required=True)
-    public_prepare.add_argument("--logs", type=Path, required=True)
+    public_prepare.add_argument("--logs", type=Path)
     public_prepare.add_argument("--labels", type=Path)
+    public_prepare.add_argument("--normal-log", type=Path, action="append")
+    public_prepare.add_argument("--abnormal-log", type=Path)
     public_prepare.add_argument("--output-dir", type=Path, required=True)
     public_prepare.add_argument("--window-size", type=int, default=64)
     public_prepare.add_argument("--stride", type=int, default=64)

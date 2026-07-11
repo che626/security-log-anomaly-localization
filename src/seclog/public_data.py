@@ -28,6 +28,12 @@ _GROUP_COLUMNS = ("blockid", "block_id", "group", "group_id", "instance_id", "id
 _MESSAGE_COLUMNS = ("message", "content", "log", "log_message", "line")
 _NORMAL_LABELS = {"-", "normal", "0", "false", "no", "none"}
 _RAW_HDFS_TIMESTAMP = re.compile(r"^\s*(\d{6})\s+(\d{6})\b")
+_OPENSTACK_INSTANCE = re.compile(
+    r"(?i)(?:\[instance:\s*|/servers/)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-"
+    r"[0-9a-f]{4}-[0-9a-f]{12})"
+)
+_OPENSTACK_TIMESTAMP = re.compile(r"\b(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?)")
+_UUID_LINE = re.compile(r"(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 
 @dataclass(frozen=True)
@@ -283,6 +289,97 @@ def prepare_openstack(
     **columns: str,
 ) -> PreparedPaths:
     return prepare_grouped_csv("openstack", logs_path, labels_path, output_dir, **columns)
+
+
+def prepare_openstack_raw(
+    normal_log_paths: Iterable[Path],
+    abnormal_log_path: Path,
+    labels_path: Path,
+    output_dir: Path,
+) -> PreparedPaths:
+    """Prepare the official OpenStack VM-instance anomaly labels.
+
+    The Loghub archive ships separate normal and abnormal files plus a short
+    list of VM UUIDs with injected anomalies. Only lines with one unambiguous
+    VM UUID in the documented ``[instance:]`` or ``/servers/`` contexts are
+    grouped. This avoids assigning a shared log line to multiple split groups.
+    """
+
+    normal_paths = tuple(normal_log_paths)
+    if not normal_paths:
+        raise PublicProtocolError("OpenStack raw preparation requires at least one normal log path")
+    for path in (*normal_paths, abnormal_log_path):
+        _require_file(path, "OpenStack log source")
+    _require_file(labels_path, "OpenStack anomaly-label source")
+    anomaly_ids = {
+        line.strip().lower()
+        for line in labels_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        if _UUID_LINE.fullmatch(line.strip())
+    }
+    if not anomaly_ids:
+        raise PublicProtocolError("OpenStack anomaly-label file contains no VM UUID")
+    grouped: OrderedDict[str, list[tuple[str, str, str | None]]] = OrderedDict()
+    unassigned = 0
+    ambiguous = 0
+    log_paths = (*normal_paths, abnormal_log_path)
+    for path in log_paths:
+        with path.open("r", encoding="utf-8", errors="replace") as handle:
+            for line_number, raw in enumerate(handle, start=1):
+                line = raw.strip()
+                if not line:
+                    continue
+                instance_ids = {match.group(1).lower() for match in _OPENSTACK_INSTANCE.finditer(line)}
+                if not instance_ids:
+                    unassigned += 1
+                    continue
+                if len(instance_ids) != 1:
+                    ambiguous += 1
+                    continue
+                instance_id = next(iter(instance_ids))
+                timestamp_match = _OPENSTACK_TIMESTAMP.search(line)
+                timestamp = timestamp_match.group(1) if timestamp_match else None
+                grouped.setdefault(instance_id, []).append(
+                    (f"{path.name}:{line_number}", line, timestamp)
+                )
+    if not grouped:
+        raise PublicProtocolError("OpenStack raw logs contain no unambiguous VM-instance lines")
+    missing_labels = sorted(anomaly_ids - set(grouped))
+    if missing_labels:
+        raise PublicProtocolError(
+            "OpenStack injected-anomaly VM ids are absent from grouped logs: "
+            + ", ".join(missing_labels[:3])
+        )
+    samples = tuple(
+        PreparedSample(
+            sid=f"openstack:{instance_id}",
+            lines=tuple(line for _source_id, line, _timestamp in records),
+            has_anomaly=int(instance_id in anomaly_ids),
+            spans=(),
+            source_group=instance_id,
+            source_line_ids=tuple(
+                f"openstack:{source_id}" for source_id, _line, _timestamp in records
+            ),
+            template_key=template_signature(line for _source_id, line, _timestamp in records),
+            timestamp=records[0][2],
+        )
+        for instance_id, records in grouped.items()
+    )
+    sources = {f"normal_{index}": path for index, path in enumerate(normal_paths, start=1)}
+    sources.update({"abnormal": abnormal_log_path, "labels": labels_path})
+    return _write_bundle(
+        dataset="openstack",
+        profile=TaskProfile.SEQUENCE_BINARY,
+        samples=samples,
+        sources=sources,
+        metadata={"source": "Loghub OpenStack", "label_unit": "injected-anomaly VM instance"},
+        preparation={
+            "grouping": "one UUID in [instance:] or /servers/ context",
+            "anomaly_vm_count": len(anomaly_ids),
+            "unassigned_log_lines": unassigned,
+            "ambiguous_log_lines": ambiguous,
+        },
+        output_dir=output_dir,
+    )
 
 
 def _parse_labelled_lines(path: Path, dataset: str) -> list[tuple[str, str, int, str | None]]:

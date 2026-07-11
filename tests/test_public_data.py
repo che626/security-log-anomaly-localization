@@ -4,6 +4,7 @@ from seclog.public_data import (
     prepare_bgl,
     prepare_hdfs,
     prepare_openstack,
+    prepare_openstack_raw,
     prepare_thunderbird,
 )
 from seclog.public_protocol import PublicProtocolError, TaskProfile, read_manifest, read_prepared_dataset
@@ -63,6 +64,28 @@ def test_prepare_grouped_openstack_requires_explicit_grouped_csv(tmp_path) -> No
         ("openstack:i1", 1),
         ("openstack:i2", 0),
     ]
+
+
+def test_prepare_openstack_raw_groups_official_vm_contexts(tmp_path) -> None:
+    normal = tmp_path / "normal.log"
+    normal.write_text(
+        "2017-05-14 19:00:00.000 INFO [instance: 11111111-1111-1111-1111-111111111111] created\n"
+        "2017-05-14 19:00:01.000 INFO /servers/22222222-2222-2222-2222-222222222222 ready\n",
+        encoding="utf-8",
+    )
+    abnormal = tmp_path / "abnormal.log"
+    abnormal.write_text(
+        "2017-05-14 20:00:00.000 ERROR [instance: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa] failed\n",
+        encoding="utf-8",
+    )
+    labels = tmp_path / "labels.txt"
+    labels.write_text("Injected anomalies\naaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\n", encoding="utf-8")
+    paths = prepare_openstack_raw((normal,), abnormal, labels, tmp_path / "out")
+    samples = read_prepared_dataset(paths.dataset_path, TaskProfile.SEQUENCE_BINARY)
+    assert sum(sample.has_anomaly for sample in samples) == 1
+    assert samples[-1].timestamp == "2017-05-14 20:00:00.000"
+    manifest = read_manifest(paths.manifest_path)
+    assert manifest.preparation["anomaly_vm_count"] == 1
 
 
 def test_prepare_bgl_builds_nonoverlapping_binary_spans(tmp_path) -> None:
