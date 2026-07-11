@@ -429,3 +429,58 @@ def train_public_neural(
             "global_class_weights": [float(value) for value in global_class_weights.detach().cpu()],
         },
     )
+
+
+def predict_public_neural(
+    profile: TaskProfile,
+    samples: Iterable[PreparedSample],
+    config: PublicNeuralConfig,
+    *,
+    checkpoint_path: Path,
+    source_manifest_sha256: str,
+    threshold: float,
+    temperature: float,
+    device_name: str = "auto",
+) -> tuple[PublicPrediction, ...]:
+    """Apply a validated public checkpoint to a target public corpus.
+
+    Threshold and temperature are supplied from the source run's validation
+    record. Target labels are deliberately not consulted in this function.
+    """
+
+    config.validate()
+    if not 0.0 <= threshold <= 1.0:
+        raise PublicProtocolError("public neural threshold must be between zero and one")
+    prepared = tuple(samples)
+    if not prepared:
+        raise PublicProtocolError("cannot predict an empty public target dataset")
+    device = choose_torch_device(device_name)
+    model_samples = build_public_model_samples(
+        prepared, profile, vocab_size=config.vocab_size, max_tokens=config.max_tokens
+    )
+    model = create_public_model(
+        vocab_size=config.vocab_size,
+        emb_dim=config.emb_dim,
+        hidden=config.hidden,
+        layers=config.layers,
+        dropout=config.dropout,
+    ).to(device)
+    load_public_checkpoint(
+        checkpoint_path,
+        model,
+        profile,
+        device,
+        manifest_sha256=source_manifest_sha256,
+    )
+    output = _collect(model, _loader(model_samples, config.eval_batch_size, shuffle=False), device)
+    if profile is TaskProfile.SEQUENCE_BINARY:
+        scores = apply_temperature(_sequence_scores(model_samples, output), temperature)
+        return tuple(
+            PublicPrediction(item.prepared.sid, float(score), int(score >= threshold))
+            for item, score in zip(model_samples, scores)
+        )
+    if profile is TaskProfile.SPAN_BINARY:
+        raw, _labels, locations = _span_line_scores(model_samples, output)
+        scores = apply_temperature(raw, temperature)
+        return _span_predictions(model_samples, scores, locations, threshold)
+    raise PublicProtocolError(f"unsupported public profile: {profile}")

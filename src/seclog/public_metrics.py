@@ -208,3 +208,41 @@ def evaluate_span_predictions(
         "gold_span_count": gold_span_count,
         "predicted_span_count": predicted_span_count,
     }
+
+
+def evaluate_normal_only_predictions(
+    samples: Iterable[PreparedSample],
+    predictions: Iterable[PublicPrediction],
+    profile: TaskProfile,
+) -> dict[str, float | int]:
+    """Measure cross-system false positives when a target corpus has no anomalies.
+
+    A normal-only target cannot yield recall, F1, ROC-AUC, or PR-AUC. Reporting
+    those as zero would be misleading, so this function reports only the
+    operational false-positive quantities that are defined.
+    """
+
+    sample_items, prediction_items = _aligned_predictions(samples, predictions, profile)
+    if any(sample.has_anomaly for sample in sample_items):
+        raise PublicProtocolError("normal-only evaluation requires every target sample to be normal")
+    false_positive_samples = sum(prediction.has_anomaly for prediction in prediction_items)
+    result: dict[str, float | int] = {
+        "sample_count": len(sample_items),
+        "false_positive_samples": false_positive_samples,
+        "sample_false_positive_rate": float(false_positive_samples / len(sample_items)),
+    }
+    if profile is TaskProfile.SPAN_BINARY:
+        total_lines = sum(len(sample.lines) for sample in sample_items)
+        false_positive_lines = sum(
+            sum(mask_from_spans(len(sample.lines), prediction.spans))
+            for sample, prediction in zip(sample_items, prediction_items)
+        )
+        result.update(
+            {
+                "line_count": total_lines,
+                "false_positive_lines": false_positive_lines,
+                "line_false_positive_rate": float(false_positive_lines / total_lines),
+                "predicted_span_count": sum(len(prediction.spans) for prediction in prediction_items),
+            }
+        )
+    return result

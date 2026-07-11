@@ -96,7 +96,11 @@ seclog public-report `
 
 ### BGL 2k 官方样本
 
-Loghub 仓库随附的 `BGL_2k.log` 被用于端到端 span-localisation 集成验证：2,000 行 → 63 个非重叠窗口。它是小型官方样本，不代表完整 BGL 泛化；[结果包](../artifacts/public/bgl-2k/README.md)保留了所有模型的行级与区间级指标。该样本中 TF-IDF 的行级 F1 为 0.8571，CNN+BiGRU 为 0.3020，进一步说明小样本、标签前缀明显时简单基线可能更合适。
+Loghub 仓库随附的 `BGL_2k.log` 被用于端到端 span-localisation 集成验证：2,000 行 → 63 个非重叠窗口。它是小型官方样本，不代表完整 BGL 泛化；[结果包](../artifacts/public/bgl-2k/README.md)保留了所有模型的行级与区间级指标。该样本中 TF-IDF 的行级 F1 为 0.8571，CNN+BiGRU 为 0.2936，进一步说明小样本、标签前缀明显时简单基线可能更合适。
+
+### BGL → Thunderbird 全正常迁移审计
+
+Loghub 固定 `Thunderbird_2k.log` 样本的 2,000 行全部为正常日志，因此不能虚构异常标签来计算 F1。使用 BGL 模型的验证集温度和阈值直接零样本推理后，63/63 个 Thunderbird 窗口被报为异常，340/2,000 行被标为异常，行级误报率为 17%。[完整审计记录](../artifacts/public/bgl-to-thunderbird-2k/README.md)保留了源/目标哈希和固定阈值。这是跨系统阈值不可直接迁移的反例，不作为“泛化成功”宣传。
 
 ### OpenStack 标签审计
 

@@ -13,4 +13,6 @@ This is a small official `BGL_2k.log` sample committed by Loghub, not the full B
 | TF-IDF + logistic regression | 0.8571 | 0.5333 | 0.8750 |
 | Decision tree | 0.0000 | 0.0000 | 0.0000 |
 | Isolation Forest | 0.3077 | 0.5806 | 0.7704 |
-| CNN + BiGRU | 0.3020 | 0.2449 | 0.3209 |
+| CNN + BiGRU | 0.2936 | 0.1622 | 0.3583 |
+
+The CNN + BiGRU row uses the current train-only global class weighting implementation. Its fixed validation threshold is intentionally reused in the Thunderbird normal-only transfer audit rather than retuned on the target data.

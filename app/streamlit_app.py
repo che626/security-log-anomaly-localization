@@ -56,7 +56,20 @@ def render_public_benchmark() -> None:
         except (OSError, pd.errors.ParserError) as error:
             st.error(f"无法读取公开基准结果：{error}")
             return
-        visible = [column for column in ("model", "f1", "line_f1", "span_f1", "pr_auc", "roc_auc") if column in frame]
+        visible = [
+            column
+            for column in (
+                "model",
+                "f1",
+                "line_f1",
+                "span_f1",
+                "pr_auc",
+                "roc_auc",
+                "sample_false_positive_rate",
+                "line_false_positive_rate",
+            )
+            if column in frame
+        ]
         st.dataframe(frame[visible], use_container_width=True, hide_index=True)
         if figure_path is not None:
             st.image(str(figure_path), caption="同一数据清单与切分下的 F1 对比")

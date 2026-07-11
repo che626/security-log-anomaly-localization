@@ -5,10 +5,18 @@ from seclog.public_metrics import (
     choose_f1_threshold,
     evaluate_sequence_predictions,
     evaluate_span_predictions,
+    evaluate_normal_only_predictions,
     fit_temperature,
     inclusive_iou,
 )
-from seclog.public_protocol import PreparedSample, PublicPrediction, PublicProtocolError, PublicSpan, template_signature
+from seclog.public_protocol import (
+    PreparedSample,
+    PublicPrediction,
+    PublicProtocolError,
+    PublicSpan,
+    TaskProfile,
+    template_signature,
+)
 
 
 def _sequence_samples() -> tuple[PreparedSample, ...]:
@@ -68,3 +76,21 @@ def test_calibration_remains_finite_for_extreme_probabilities() -> None:
     calibrated = apply_temperature((1e-6, 1 - 1e-6), temperature)
     assert (calibrated > 0).all()
     assert (calibrated < 1).all()
+
+
+def test_normal_only_metrics_report_false_positive_rates_only() -> None:
+    samples = (
+        PreparedSample(
+            sid="normal",
+            lines=("a", "b"),
+            has_anomaly=0,
+            spans=(),
+            source_group="normal",
+            source_line_ids=("0", "1"),
+            template_key="normal",
+        ),
+    )
+    predictions = (PublicPrediction("normal", 0.8, 1, (PublicSpan(1, 1),)),)
+    metrics = evaluate_normal_only_predictions(samples, predictions, TaskProfile.SPAN_BINARY)
+    assert metrics["sample_false_positive_rate"] == 1.0
+    assert metrics["line_false_positive_rate"] == 0.5

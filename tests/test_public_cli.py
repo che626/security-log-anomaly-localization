@@ -92,3 +92,48 @@ def test_public_cli_runs_preparation_baseline_neural_and_report(tmp_path) -> Non
     )
     assert result.returncode == 0, result.stderr
     assert (output / "report" / "f1-comparison.svg").is_file()
+
+    normal_target = tmp_path / "thunderbird.log"
+    normal_target.write_text("- 1 normal\n- 2 normal\n- 3 normal\n- 4 normal\n", encoding="utf-8")
+    target_dir = tmp_path / "target"
+    result = _run(
+        "public-prepare",
+        "--dataset",
+        "thunderbird",
+        "--logs",
+        str(normal_target),
+        "--max-source-lines",
+        "4",
+        "--output-dir",
+        str(target_dir),
+        "--window-size",
+        "2",
+        "--stride",
+        "2",
+    )
+    assert result.returncode == 0, result.stderr
+    result = _run(
+        "public-transfer-negative",
+        "--target-prepared",
+        str(target_dir / "thunderbird-span_binary.jsonl"),
+        "--target-manifest",
+        str(target_dir / "thunderbird-span_binary.manifest.json"),
+        "--source-manifest",
+        str(manifest),
+        "--source-result",
+        str(output / "synthetic-neural-result.json"),
+        "--checkpoint",
+        str(output / "synthetic-neural.pt"),
+        "--config",
+        "configs/public/smoke.yaml",
+        "--profile",
+        "span_binary",
+        "--output-dir",
+        str(output),
+        "--experiment-id",
+        "synthetic-transfer",
+        "--device",
+        "cpu",
+    )
+    assert result.returncode == 0, result.stderr
+    assert (output / "synthetic-transfer-result.json").is_file()

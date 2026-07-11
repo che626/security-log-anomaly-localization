@@ -8,6 +8,7 @@ from seclog.public_training import (
     _global_class_weights,
     create_public_model,
     load_public_checkpoint,
+    predict_public_neural,
     train_public_neural,
 )
 
@@ -65,6 +66,19 @@ def test_public_sequence_training_cpu_and_checkpoint_boundary(tmp_path) -> None:
     load_public_checkpoint(checkpoint, model, profile, torch.device("cpu"), manifest_sha256="a" * 64)
     with pytest.raises(PublicProtocolError, match="profile"):
         load_public_checkpoint(checkpoint, model, TaskProfile.SPAN_BINARY, torch.device("cpu"))
+
+    target = _samples("target", 4, profile)
+    prediction = predict_public_neural(
+        profile,
+        target,
+        _config(),
+        checkpoint_path=checkpoint,
+        source_manifest_sha256="a" * 64,
+        threshold=run.threshold,
+        temperature=run.temperature,
+        device_name="cpu",
+    )
+    assert len(prediction) == len(target)
 
 
 def test_public_span_training_cpu() -> None:

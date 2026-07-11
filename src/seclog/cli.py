@@ -16,7 +16,11 @@ from .public_data import (
     prepare_openstack_raw,
     prepare_thunderbird,
 )
-from .public_metrics import evaluate_sequence_predictions, evaluate_span_predictions
+from .public_metrics import (
+    evaluate_normal_only_predictions,
+    evaluate_sequence_predictions,
+    evaluate_span_predictions,
+)
 from .public_protocol import TaskProfile, read_manifest, read_prepared_dataset, sha256_file as public_sha256
 from .public_reporting import (
     PublicResultRecord,
@@ -33,7 +37,7 @@ from .public_splitting import (
     template_isolated_split,
     write_split_assignment,
 )
-from .public_training import load_public_neural_config, train_public_neural
+from .public_training import load_public_neural_config, predict_public_neural, train_public_neural
 from .schemas import validate_prediction_frame, validate_test_frame, validate_training_frame
 from .training import run_training
 
@@ -271,6 +275,60 @@ def _public_report(args: argparse.Namespace) -> None:
     print(json.dumps({name: str(path) for name, path in paths.items()}, ensure_ascii=False, indent=2))
 
 
+def _public_transfer_negative(args: argparse.Namespace) -> None:
+    profile = TaskProfile(args.profile)
+    target_manifest = read_manifest(args.target_manifest)
+    if target_manifest.profile != profile.value:
+        raise ValueError("target manifest profile does not match --profile")
+    target_samples = read_prepared_dataset(args.target_prepared, profile)
+    source_manifest_hash = public_sha256(args.source_manifest)
+    source_result = read_result_record(args.source_result)
+    if source_result.profile != profile.value:
+        raise ValueError("source result profile does not match --profile")
+    try:
+        threshold = float(source_result.metadata["threshold"])
+        temperature = float(source_result.metadata["temperature"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("source result lacks neural threshold or temperature metadata") from exc
+    predictions = predict_public_neural(
+        profile,
+        target_samples,
+        load_public_neural_config(args.config),
+        checkpoint_path=args.checkpoint,
+        source_manifest_sha256=source_manifest_hash,
+        threshold=threshold,
+        temperature=temperature,
+        device_name=args.device,
+    )
+    metrics = evaluate_normal_only_predictions(target_samples, predictions, profile)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    experiment_id = args.experiment_id or f"{source_result.dataset}-to-{target_manifest.dataset}-normal-only"
+    prediction_path = args.output_dir / f"{experiment_id}-predictions.jsonl"
+    result_path = args.output_dir / f"{experiment_id}-result.json"
+    write_predictions(prediction_path, predictions)
+    write_result_record(
+        result_path,
+        PublicResultRecord(
+            experiment_id=experiment_id,
+            dataset=target_manifest.dataset,
+            profile=profile.value,
+            split_strategy="cross_system_normal_only",
+            model=f"{source_result.model}_from_{source_result.dataset}",
+            manifest_sha256=public_sha256(args.target_manifest),
+            metrics=metrics,
+            metadata={
+                "source_dataset": source_result.dataset,
+                "source_experiment_id": source_result.experiment_id,
+                "source_manifest_sha256": source_manifest_hash,
+                "threshold_from_source_validation": threshold,
+                "temperature_from_source_validation": temperature,
+                "device": args.device,
+            },
+        ),
+    )
+    print(json.dumps({"result": str(result_path), "predictions": str(prediction_path)}, ensure_ascii=False, indent=2))
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="seclog",
@@ -356,6 +414,22 @@ def build_parser() -> argparse.ArgumentParser:
     public_report.add_argument("--result", type=Path, action="append", required=True)
     public_report.add_argument("--output-dir", type=Path, required=True)
     public_report.set_defaults(handler=_public_report)
+
+    public_transfer = commands.add_parser(
+        "public-transfer-negative",
+        help="measure false positives from a source neural model on an all-normal target corpus",
+    )
+    public_transfer.add_argument("--target-prepared", type=Path, required=True)
+    public_transfer.add_argument("--target-manifest", type=Path, required=True)
+    public_transfer.add_argument("--source-manifest", type=Path, required=True)
+    public_transfer.add_argument("--source-result", type=Path, required=True)
+    public_transfer.add_argument("--checkpoint", type=Path, required=True)
+    public_transfer.add_argument("--config", type=Path, required=True)
+    public_transfer.add_argument("--profile", choices=[item.value for item in TaskProfile], required=True)
+    public_transfer.add_argument("--output-dir", type=Path, required=True)
+    public_transfer.add_argument("--experiment-id")
+    public_transfer.add_argument("--device", default="auto")
+    public_transfer.set_defaults(handler=_public_transfer_negative)
     return parser
 
 
