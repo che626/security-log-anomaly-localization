@@ -35,11 +35,11 @@
 | Template-isolated | Isolation Forest | 0.3260 | 0.3129 | 0.6662 |
 | Template-isolated | CNN + BiGRU | 0.9997 | 0.9936 | 0.9985 |
 
-![Random-split F1 comparison](random-f1.svg)
+![Random-split Span F1 comparison](random-span-f1.svg)
 
-![Chronological-split F1 comparison](chronological-f1.svg)
+![Chronological-split Span F1 comparison](chronological-span-f1.svg)
 
-![Template-isolated-split F1 comparison](template-isolated-f1.svg)
+![Template-isolated-split Span F1 comparison](template-isolated-span-f1.svg)
 
 对应的安全聚合表为 [random](random-summary.csv)、[chronological](chronological-summary.csv) 和 [template-isolated](template-isolated-summary.csv)。它们不含任何原始日志、准备后的样本、逐行预测或模型权重。
 

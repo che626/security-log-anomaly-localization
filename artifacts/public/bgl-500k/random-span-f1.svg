@@ -1,24 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="760" height="312" viewBox="0 0 760 312">
+<title>bgl / random Span F1 comparison</title>
 <rect width="100%" height="100%" fill="white"/>
-<text x="24" y="30" font-size="20" font-family="Arial, sans-serif" font-weight="700">bgl / chronological F1 comparison</text>
+<text x="24" y="30" font-size="20" font-family="Arial, sans-serif" font-weight="700">bgl / random Span F1 comparison</text>
 <text x="24" y="73" font-size="14">decision_tree</text>
 <rect x="240" y="56" width="460" height="24" rx="4" fill="#e5e7eb"/>
 <rect x="240" y="56" width="460.0" height="24" rx="4" fill="#2563eb"/>
 <text x="710" y="73" font-size="13" text-anchor="end">1.0000</text>
 <text x="24" y="117" font-size="14">isolation_forest</text>
 <rect x="240" y="100" width="460" height="24" rx="4" fill="#e5e7eb"/>
-<rect x="240" y="100" width="222.7" height="24" rx="4" fill="#2563eb"/>
-<text x="710" y="117" font-size="13" text-anchor="end">0.4842</text>
+<rect x="240" y="100" width="267.8" height="24" rx="4" fill="#2563eb"/>
+<text x="710" y="117" font-size="13" text-anchor="end">0.5823</text>
 <text x="24" y="161" font-size="14">neural_cnn_bigru</text>
 <rect x="240" y="144" width="460" height="24" rx="4" fill="#e5e7eb"/>
-<rect x="240" y="144" width="133.4" height="24" rx="4" fill="#2563eb"/>
-<text x="710" y="161" font-size="13" text-anchor="end">0.2900</text>
+<rect x="240" y="144" width="458.4" height="24" rx="4" fill="#2563eb"/>
+<text x="710" y="161" font-size="13" text-anchor="end">0.9966</text>
 <text x="24" y="205" font-size="14">rarity</text>
 <rect x="240" y="188" width="460" height="24" rx="4" fill="#e5e7eb"/>
-<rect x="240" y="188" width="222.7" height="24" rx="4" fill="#2563eb"/>
-<text x="710" y="205" font-size="13" text-anchor="end">0.4842</text>
+<rect x="240" y="188" width="267.8" height="24" rx="4" fill="#2563eb"/>
+<text x="710" y="205" font-size="13" text-anchor="end">0.5823</text>
 <text x="24" y="249" font-size="14">tfidf_logistic</text>
 <rect x="240" y="232" width="460" height="24" rx="4" fill="#e5e7eb"/>
-<rect x="240" y="232" width="267.7" height="24" rx="4" fill="#2563eb"/>
-<text x="710" y="249" font-size="13" text-anchor="end">0.5820</text>
+<rect x="240" y="232" width="457.9" height="24" rx="4" fill="#2563eb"/>
+<text x="710" y="249" font-size="13" text-anchor="end">0.9955</text>
 </svg>

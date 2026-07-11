@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="760" height="312" viewBox="0 0 760 312">
+<title>bgl / template_isolated Span F1 comparison</title>
 <rect width="100%" height="100%" fill="white"/>
-<text x="24" y="30" font-size="20" font-family="Arial, sans-serif" font-weight="700">bgl / template_isolated F1 comparison</text>
+<text x="24" y="30" font-size="20" font-family="Arial, sans-serif" font-weight="700">bgl / template_isolated Span F1 comparison</text>
 <text x="24" y="73" font-size="14">decision_tree</text>
 <rect x="240" y="56" width="460" height="24" rx="4" fill="#e5e7eb"/>
 <rect x="240" y="56" width="457.6" height="24" rx="4" fill="#2563eb"/>
