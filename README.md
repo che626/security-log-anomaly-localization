@@ -2,7 +2,7 @@
 
 > Public benchmark extension: the repository now includes reproducible, leakage-aware binary public-log workflows for HDFS/OpenStack detection and BGL/Thunderbird span localisation. Competition outcomes and public-benchmark results are kept separate. See [the public benchmark protocol](docs/public-benchmark.md).
 
-Verified public evidence is available in the [HDFS 100k aggregate report](artifacts/public/hdfs-100k/README.md) and the [resume/interview handoff](docs/portfolio-handoff.md). The HDFS results include random, chronological, and template-isolated splits rather than a single best-looking score.
+Verified public evidence is available in the [HDFS 100k aggregate report](artifacts/public/hdfs-100k/README.md), the [BGL-500k aggregate report](artifacts/public/bgl-500k/README.md), and the [resume/interview handoff](docs/portfolio-handoff.md). The public results include random, chronological, and template-isolated splits rather than a single best-looking score.
 
 ## Verified public benchmark highlights
 
@@ -12,6 +12,7 @@ Verified public evidence is available in the [HDFS 100k aggregate report](artifa
 | Time-ordered detection | Same HDFS data; future logs held out | ROC-AUC **0.7767**, F1 **0.5693** | Temporal shift changes the operating point; Isolation Forest has the best F1 (0.6713). |
 | Template-isolated detection | Same HDFS data; normalized templates disjoint | ROC-AUC **0.8886**, F1 **0.4138** | Score ordering transfers better than the validation-selected threshold. |
 | Cross-system normal-only audit | BGL 2k model → Thunderbird 2k | Line FPR **17.0%**, window FPR **100%** | A BGL threshold does not safely transfer to another log system. |
+| Time-ordered span localisation stress test | BGL fixed first 500k raw lines; not full BGL | Line F1 **0.5837**, span F1 **0.2900** | CNN+BiGRU drops sharply over time; simple baselines are not hidden and the neural model is not universally best. |
 
 Every number above is tied to a data manifest hash, fixed seed, validation-only threshold/calibration policy, and a checked-in aggregate report. The raw logs, checkpoints, and detailed predictions are intentionally excluded from Git history.
 
