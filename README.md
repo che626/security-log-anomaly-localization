@@ -4,6 +4,19 @@
 
 Verified public evidence is available in the [HDFS 100k aggregate report](artifacts/public/hdfs-100k/README.md) and the [resume/interview handoff](docs/portfolio-handoff.md). The HDFS results include random, chronological, and template-isolated splits rather than a single best-looking score.
 
+## Verified public benchmark highlights
+
+| Evaluation | Data / protocol | CNN + BiGRU result | What the result says |
+| --- | --- | ---: | --- |
+| Random detection | HDFS 100k subset; 7,940 block sequences | ROC-AUC **0.9044**, PR-AUC **0.6570**, F1 **0.6383** | Ranking quality is strong; TF-IDF logistic regression has slightly higher F1 (0.6598). |
+| Time-ordered detection | Same HDFS data; future logs held out | ROC-AUC **0.7767**, F1 **0.5693** | Temporal shift changes the operating point; Isolation Forest has the best F1 (0.6713). |
+| Template-isolated detection | Same HDFS data; normalized templates disjoint | ROC-AUC **0.8886**, F1 **0.4138** | Score ordering transfers better than the validation-selected threshold. |
+| Cross-system normal-only audit | BGL 2k model → Thunderbird 2k | Line FPR **17.0%**, window FPR **100%** | A BGL threshold does not safely transfer to another log system. |
+
+Every number above is tied to a data manifest hash, fixed seed, validation-only threshold/calibration policy, and a checked-in aggregate report. The raw logs, checkpoints, and detailed predictions are intentionally excluded from Git history.
+
+![HDFS 100k random-split F1 comparison](artifacts/public/hdfs-100k/random-f1.svg)
+
 一个可复现的多任务系统日志异常检测作品集：同时判断日志序列是否异常、定位异常闭区间，并识别异常类型。
 
 项目源自我以个人队伍 `che` 参加 ISCC 2026 数据安全赛的系统日志题。官方最终名单排名为 **277**，未获得奖项；该题官方 B 榜得分为 **0.87111**。比赛期间选定方案的历史 OOF 为 **0.9794512565**，但解码参数使用过同一批 OOF 预测进行选择，因此它是历史、非锁定估计，不能与官方 B 榜成绩等同。
