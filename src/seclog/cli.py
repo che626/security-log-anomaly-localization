@@ -8,6 +8,26 @@ from .config import load_config
 from .data import sha256_file
 from .inference import predict
 from .metrics import evaluate_predictions
+from .public_baselines import BASELINE_NAMES, run_baseline
+from .public_data import prepare_bgl, prepare_hdfs, prepare_openstack, prepare_thunderbird
+from .public_metrics import evaluate_sequence_predictions, evaluate_span_predictions
+from .public_protocol import TaskProfile, read_manifest, read_prepared_dataset, sha256_file as public_sha256
+from .public_reporting import (
+    PublicResultRecord,
+    read_result_record,
+    write_aggregate_report,
+    write_predictions,
+    write_result_record,
+)
+from .public_splitting import (
+    chronological_split,
+    partition_samples,
+    random_split,
+    read_split_assignment,
+    template_isolated_split,
+    write_split_assignment,
+)
+from .public_training import load_public_neural_config, train_public_neural
 from .schemas import validate_prediction_frame, validate_test_frame, validate_training_frame
 from .training import run_training
 
@@ -77,6 +97,165 @@ def _evaluate(args: argparse.Namespace) -> None:
     print(json.dumps(evaluate_predictions(prediction, gold), ensure_ascii=False, indent=2))
 
 
+def _public_prepare(args: argparse.Namespace) -> None:
+    if args.dataset == "hdfs":
+        if args.labels is None:
+            raise ValueError("HDFS preparation requires --labels")
+        paths = prepare_hdfs(args.logs, args.labels, args.output_dir)
+    elif args.dataset == "openstack":
+        if args.labels is None:
+            raise ValueError("OpenStack preparation requires --labels")
+        columns = {
+            "group_column": args.group_column,
+            "message_column": args.message_column,
+            "label_group_column": args.label_group_column,
+            "label_column": args.label_column,
+        }
+        paths = prepare_openstack(args.logs, args.labels, args.output_dir, **columns)
+    elif args.dataset == "bgl":
+        paths = prepare_bgl(
+            args.logs,
+            args.output_dir,
+            window_size=args.window_size,
+            stride=args.stride,
+            max_source_lines=args.max_source_lines,
+        )
+    elif args.dataset == "thunderbird":
+        if args.max_source_lines is None:
+            raise ValueError("Thunderbird preparation requires --max-source-lines")
+        paths = prepare_thunderbird(
+            args.logs,
+            args.output_dir,
+            window_size=args.window_size,
+            stride=args.stride,
+            max_source_lines=args.max_source_lines,
+        )
+    else:
+        raise ValueError(f"unsupported public dataset {args.dataset}")
+    print(
+        json.dumps(
+            {"prepared_dataset": str(paths.dataset_path), "manifest": str(paths.manifest_path)},
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+
+
+def _public_split(args: argparse.Namespace) -> None:
+    profile = TaskProfile(args.profile)
+    samples = read_prepared_dataset(args.prepared, profile)
+    kwargs = {"seed": args.seed, "train_fraction": args.train_fraction, "validation_fraction": args.validation_fraction}
+    if args.strategy == "random":
+        assignment = random_split(samples, **kwargs)
+    elif args.strategy == "chronological":
+        assignment = chronological_split(samples, **kwargs)
+    elif args.strategy == "template_isolated":
+        assignment = template_isolated_split(samples, **kwargs)
+    else:
+        raise ValueError(f"unsupported public split strategy {args.strategy}")
+    write_split_assignment(args.output, assignment)
+    print(json.dumps({"split": str(args.output), "strategy": assignment.strategy}, ensure_ascii=False, indent=2))
+
+
+def _public_context(args: argparse.Namespace):
+    profile = TaskProfile(args.profile)
+    manifest = read_manifest(args.manifest)
+    if manifest.profile != profile.value:
+        raise ValueError("manifest profile does not match --profile")
+    samples = read_prepared_dataset(args.prepared, profile)
+    assignment = read_split_assignment(args.split, samples)
+    return profile, manifest, public_sha256(args.manifest), assignment, partition_samples(samples, assignment)
+
+
+def _public_run_baseline(args: argparse.Namespace) -> None:
+    profile, manifest, manifest_hash, assignment, partitions = _public_context(args)
+    train, validation, test = partitions
+    run = run_baseline(args.name, profile, train, validation, test, seed=args.seed)
+    metrics = (
+        evaluate_sequence_predictions(test, run.test_predictions)
+        if profile is TaskProfile.SEQUENCE_BINARY
+        else evaluate_span_predictions(test, run.test_predictions)
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    experiment_id = args.experiment_id or f"{manifest.dataset}-{assignment.strategy}-{run.name}"
+    prediction_path = args.output_dir / f"{experiment_id}-predictions.jsonl"
+    record_path = args.output_dir / f"{experiment_id}-result.json"
+    write_predictions(prediction_path, run.test_predictions)
+    write_result_record(
+        record_path,
+        PublicResultRecord(
+            experiment_id=experiment_id,
+            dataset=manifest.dataset,
+            profile=profile.value,
+            split_strategy=assignment.strategy,
+            model=run.name,
+            manifest_sha256=manifest_hash,
+            metrics=metrics,
+            metadata={**run.metadata, "threshold": run.threshold, "validation_sample_count": len(validation)},
+        ),
+    )
+    print(json.dumps({"result": str(record_path), "predictions": str(prediction_path)}, ensure_ascii=False, indent=2))
+
+
+def _public_train(args: argparse.Namespace) -> None:
+    profile, manifest, manifest_hash, assignment, partitions = _public_context(args)
+    train, validation, test = partitions
+    config = load_public_neural_config(args.config)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    experiment_id = args.experiment_id or f"{manifest.dataset}-{assignment.strategy}-neural"
+    checkpoint = args.output_dir / f"{experiment_id}.pt"
+    run = train_public_neural(
+        profile,
+        train,
+        validation,
+        test,
+        config,
+        device_name=args.device,
+        checkpoint_path=checkpoint,
+        manifest_sha256=manifest_hash,
+    )
+    metrics = (
+        evaluate_sequence_predictions(test, run.test_predictions)
+        if profile is TaskProfile.SEQUENCE_BINARY
+        else evaluate_span_predictions(test, run.test_predictions)
+    )
+    prediction_path = args.output_dir / f"{experiment_id}-predictions.jsonl"
+    record_path = args.output_dir / f"{experiment_id}-result.json"
+    write_predictions(prediction_path, run.test_predictions)
+    write_result_record(
+        record_path,
+        PublicResultRecord(
+            experiment_id=experiment_id,
+            dataset=manifest.dataset,
+            profile=profile.value,
+            split_strategy=assignment.strategy,
+            model="neural_cnn_bigru",
+            manifest_sha256=manifest_hash,
+            metrics=metrics,
+            metadata={
+                **run.metadata,
+                "threshold": run.threshold,
+                "temperature": run.temperature,
+                "epochs_trained": run.epochs_trained,
+                "validation_sample_count": len(validation),
+            },
+        ),
+    )
+    print(
+        json.dumps(
+            {"result": str(record_path), "predictions": str(prediction_path), "checkpoint": str(checkpoint)},
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+
+
+def _public_report(args: argparse.Namespace) -> None:
+    records = [read_result_record(path) for path in args.result]
+    paths = write_aggregate_report(args.output_dir, records)
+    print(json.dumps({name: str(path) for name, path in paths.items()}, ensure_ascii=False, indent=2))
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="seclog",
@@ -109,6 +288,57 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--prediction", type=Path, required=True)
     evaluate.add_argument("--gold", type=Path, required=True)
     evaluate.set_defaults(handler=_evaluate)
+
+    public_prepare = commands.add_parser("public-prepare", help="prepare a local public Loghub dataset")
+    public_prepare.add_argument("--dataset", choices=("hdfs", "openstack", "bgl", "thunderbird"), required=True)
+    public_prepare.add_argument("--logs", type=Path, required=True)
+    public_prepare.add_argument("--labels", type=Path)
+    public_prepare.add_argument("--output-dir", type=Path, required=True)
+    public_prepare.add_argument("--window-size", type=int, default=64)
+    public_prepare.add_argument("--stride", type=int, default=64)
+    public_prepare.add_argument("--max-source-lines", type=int)
+    public_prepare.add_argument("--group-column")
+    public_prepare.add_argument("--message-column")
+    public_prepare.add_argument("--label-group-column")
+    public_prepare.add_argument("--label-column")
+    public_prepare.set_defaults(handler=_public_prepare)
+
+    public_split = commands.add_parser("public-split", help="create a leakage-safe public split")
+    public_split.add_argument("--prepared", type=Path, required=True)
+    public_split.add_argument("--profile", choices=[item.value for item in TaskProfile], required=True)
+    public_split.add_argument("--strategy", choices=("random", "chronological", "template_isolated"), required=True)
+    public_split.add_argument("--output", type=Path, required=True)
+    public_split.add_argument("--seed", type=int, default=20260711)
+    public_split.add_argument("--train-fraction", type=float, default=0.6)
+    public_split.add_argument("--validation-fraction", type=float, default=0.2)
+    public_split.set_defaults(handler=_public_split)
+
+    public_baseline = commands.add_parser("public-run-baseline", help="run a public baseline")
+    public_baseline.add_argument("--prepared", type=Path, required=True)
+    public_baseline.add_argument("--manifest", type=Path, required=True)
+    public_baseline.add_argument("--split", type=Path, required=True)
+    public_baseline.add_argument("--profile", choices=[item.value for item in TaskProfile], required=True)
+    public_baseline.add_argument("--name", choices=BASELINE_NAMES, required=True)
+    public_baseline.add_argument("--output-dir", type=Path, required=True)
+    public_baseline.add_argument("--experiment-id")
+    public_baseline.add_argument("--seed", type=int, default=20260711)
+    public_baseline.set_defaults(handler=_public_run_baseline)
+
+    public_train = commands.add_parser("public-train", help="train the binary public neural profile")
+    public_train.add_argument("--prepared", type=Path, required=True)
+    public_train.add_argument("--manifest", type=Path, required=True)
+    public_train.add_argument("--split", type=Path, required=True)
+    public_train.add_argument("--profile", choices=[item.value for item in TaskProfile], required=True)
+    public_train.add_argument("--config", type=Path, required=True)
+    public_train.add_argument("--output-dir", type=Path, required=True)
+    public_train.add_argument("--experiment-id")
+    public_train.add_argument("--device", default="auto")
+    public_train.set_defaults(handler=_public_train)
+
+    public_report = commands.add_parser("public-report", help="aggregate compatible public result records")
+    public_report.add_argument("--result", type=Path, action="append", required=True)
+    public_report.add_argument("--output-dir", type=Path, required=True)
+    public_report.set_defaults(handler=_public_report)
     return parser
 
 

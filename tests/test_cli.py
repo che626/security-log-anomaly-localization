@@ -18,6 +18,8 @@ def test_cli_help_lists_stable_commands() -> None:
     assert "train" in result.stdout
     assert "predict" in result.stdout
     assert "evaluate" in result.stdout
+    assert "public-prepare" in result.stdout
+    assert "public-train" in result.stdout
 
 
 def test_check_data_accepts_synthetic_fixture() -> None:

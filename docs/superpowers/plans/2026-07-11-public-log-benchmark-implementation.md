@@ -135,7 +135,7 @@ seclog public-split --help
 seclog public-run-baseline --help
 seclog public-train --help
 seclog public-report --help
-python scripts/publication_audit.py
+python scripts/audit_publication.py
 git status --short
 ```
 

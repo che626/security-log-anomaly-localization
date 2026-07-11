@@ -25,5 +25,6 @@ artifacts/checkpoints/
 !examples/**/*.csv
 !tests/fixtures/**/*.csv
 !artifacts/metrics/*.csv
+!artifacts/public/**/*.csv
 streamlit_secrets.toml
 .env

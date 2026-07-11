@@ -1,0 +1,16 @@
+public_neural:
+  vocab_size: 32768
+  max_tokens: 96
+  emb_dim: 64
+  hidden: 96
+  layers: 1
+  dropout: 0.15
+  epochs: 12
+  batch_size: 32
+  eval_batch_size: 64
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  boundary_loss_weight: 0.2
+  global_loss_weight: 0.2
+  patience: 3
+  seed: 20260711

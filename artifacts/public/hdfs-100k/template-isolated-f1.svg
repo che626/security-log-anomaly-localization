@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="312" viewBox="0 0 760 312">
+<rect width="100%" height="100%" fill="white"/>
+<text x="24" y="30" font-size="20" font-family="Arial, sans-serif" font-weight="700">hdfs / template_isolated F1 comparison</text>
+<text x="24" y="73" font-size="14">decision_tree</text><rect x="240" y="56" width="460" height="24" rx="4" fill="#e5e7eb"/><rect x="240" y="56" width="233.4" height="24" rx="4" fill="#2563eb"/><text x="710" y="73" font-size="13" text-anchor="end">0.5075</text>
+<text x="24" y="117" font-size="14">isolation_forest</text><rect x="240" y="100" width="460" height="24" rx="4" fill="#e5e7eb"/><rect x="240" y="100" width="230.0" height="24" rx="4" fill="#2563eb"/><text x="710" y="117" font-size="13" text-anchor="end">0.5000</text>
+<text x="24" y="161" font-size="14">neural_cnn_bigru</text><rect x="240" y="144" width="460" height="24" rx="4" fill="#e5e7eb"/><rect x="240" y="144" width="190.3" height="24" rx="4" fill="#2563eb"/><text x="710" y="161" font-size="13" text-anchor="end">0.4138</text>
+<text x="24" y="205" font-size="14">rarity</text><rect x="240" y="188" width="460" height="24" rx="4" fill="#e5e7eb"/><rect x="240" y="188" width="28.2" height="24" rx="4" fill="#2563eb"/><text x="710" y="205" font-size="13" text-anchor="end">0.0613</text>
+<text x="24" y="249" font-size="14">tfidf_logistic</text><rect x="240" y="232" width="460" height="24" rx="4" fill="#e5e7eb"/><rect x="240" y="232" width="230.0" height="24" rx="4" fill="#2563eb"/><text x="710" y="249" font-size="13" text-anchor="end">0.5000</text>
+</svg>

@@ -1,5 +1,9 @@
 # Security Log Anomaly Localization
 
+> Public benchmark extension: the repository now includes reproducible, leakage-aware binary public-log workflows for HDFS/OpenStack detection and BGL/Thunderbird span localisation. Competition outcomes and public-benchmark results are kept separate. See [the public benchmark protocol](docs/public-benchmark.md).
+
+Verified public evidence is available in the [HDFS 100k aggregate report](artifacts/public/hdfs-100k/README.md) and the [resume/interview handoff](docs/portfolio-handoff.md). The HDFS results include random, chronological, and template-isolated splits rather than a single best-looking score.
+
 一个可复现的多任务系统日志异常检测作品集：同时判断日志序列是否异常、定位异常闭区间，并识别异常类型。
 
 项目源自我以个人队伍 `che` 参加 ISCC 2026 数据安全赛的系统日志题。官方最终名单排名为 **277**，未获得奖项；该题官方 B 榜得分为 **0.87111**。比赛期间选定方案的历史 OOF 为 **0.9794512565**，但解码参数使用过同一批 OOF 预测进行选择，因此它是历史、非锁定估计，不能与官方 B 榜成绩等同。

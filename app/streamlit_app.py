@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 
 from seclog.config import load_config
@@ -11,6 +12,7 @@ from seclog.presentation import annotate_lines
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_DIR = ROOT / "examples" / "synthetic_logs"
+PUBLIC_ARTIFACT_DIR = ROOT / "artifacts" / "public"
 MAX_LINES = 400
 MAX_CHARACTERS = 200_000
 
@@ -26,6 +28,38 @@ def load_examples() -> dict[str, list[str]]:
 def configured_checkpoints() -> list[Path]:
     raw = os.environ.get("SECLOG_CHECKPOINTS", "")
     return [Path(item) for item in raw.split(os.pathsep) if item.strip()]
+
+
+def public_benchmark_reports() -> list[tuple[str, Path, Path | None]]:
+    reports: list[tuple[str, Path, Path | None]] = []
+    for csv_path in sorted(PUBLIC_ARTIFACT_DIR.glob("*/*-summary.csv")):
+        stem = csv_path.stem.removesuffix("-summary")
+        figure = csv_path.with_name(f"{stem}-f1.svg")
+        reports.append((f"{csv_path.parent.name} / {stem}", csv_path, figure if figure.is_file() else None))
+    return reports
+
+
+def render_public_benchmark() -> None:
+    reports = public_benchmark_reports()
+    with st.expander("已验证的公开基准实验", expanded=False):
+        st.caption(
+            "仅展示聚合指标；原始公开日志、训练缓存、权重和逐行预测均不在仓库中。"
+        )
+        if not reports:
+            st.info("尚未找到公开基准的聚合结果文件。")
+            return
+        labels = [item[0] for item in reports]
+        selected = st.selectbox("选择实验报告", labels, key="public_benchmark_report")
+        _label, table_path, figure_path = reports[labels.index(selected)]
+        try:
+            frame = pd.read_csv(table_path)
+        except (OSError, pd.errors.ParserError) as error:
+            st.error(f"无法读取公开基准结果：{error}")
+            return
+        visible = [column for column in ("model", "f1", "line_f1", "span_f1", "pr_auc", "roc_auc") if column in frame]
+        st.dataframe(frame[visible], use_container_width=True, hide_index=True)
+        if figure_path is not None:
+            st.image(str(figure_path), caption="同一数据清单与切分下的 F1 对比")
 
 
 def render_lines(lines: list[str], start: int, end: int) -> None:
@@ -49,6 +83,7 @@ st.title("Security Log Anomaly Localization")
 st.warning(
     "作品集原型，仅用于演示模型流程，不是生产安全系统；输出可能出错，置信度未经校准。"
 )
+render_public_benchmark()
 
 examples = load_examples()
 source = st.selectbox("输入来源", [*examples, "粘贴自定义日志"])

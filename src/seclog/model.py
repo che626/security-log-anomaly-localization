@@ -15,8 +15,12 @@ class LogBoundaryNetwork(nn.Module):
         hidden: int = 224,
         num_layers: int = 2,
         dropout: float = 0.25,
+        num_types: int = N_TYPES,
     ) -> None:
         super().__init__()
+        if num_types < 1:
+            raise ValueError("num_types must be positive")
+        self.num_types = num_types
         self.emb = nn.EmbeddingBag(vocab_size, emb_dim, mode="mean", include_last_offset=False)
         self.proj = nn.Sequential(
             nn.Linear(emb_dim + 10, hidden),
@@ -36,14 +40,14 @@ class LogBoundaryNetwork(nn.Module):
             bidirectional=True,
         )
         self.dropout = nn.Dropout(dropout)
-        self.tag_head = nn.Linear(hidden * 2, N_LABELS)
-        self.start_head = nn.Linear(hidden * 2, N_TYPES)
-        self.end_head = nn.Linear(hidden * 2, N_TYPES)
+        self.tag_head = nn.Linear(hidden * 2, 1 + 2 * num_types)
+        self.start_head = nn.Linear(hidden * 2, num_types)
+        self.end_head = nn.Linear(hidden * 2, num_types)
         self.global_head = nn.Sequential(
             nn.Linear(hidden * 4, hidden),
             nn.GELU(),
             nn.Dropout(dropout),
-            nn.Linear(hidden, N_TYPES + 1),
+            nn.Linear(hidden, num_types + 1),
         )
 
     def forward(self, input_ids, offsets, owner, mask, pos_feats):

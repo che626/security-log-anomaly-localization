@@ -97,3 +97,18 @@ Decoder tuning and locked evaluation use disjoint normalized-template groups. Th
 ## Private/public boundary
 
 The public repository contains code, tests, synthetic fixtures, configurations and small metric manifests. Competition CSVs, raw logs, participant identifiers, caches, predictions and trained weights remain outside Git history. `.gitignore`, explicit paths and the publication audit provide complementary controls; none replaces a final manual review.
+
+## Public benchmark profiles
+
+Public Loghub experiments use a separate binary contract in `public_protocol.py`; they never repurpose the ten ISCC anomaly labels. The public neural path reuses the same normalized line features, EmbeddingBag, CNN, BiGRU, pooling, and boundary-head pattern, but creates a one-anomaly-type internal head with a two-class global decision. Its checkpoints declare `checkpoint_kind=public_binary_log_benchmark`, task profile, binary label vocabulary, and manifest hash, so private ISCC checkpoints cannot be loaded as public runs.
+
+The public path is deliberately modular:
+
+| Module | Responsibility |
+| --- | --- |
+| `public_data.py` | Explicit local Loghub adapters and source manifests |
+| `public_splitting.py` | Random, chronological, and template-isolated assignments with source-line leakage checks |
+| `public_baselines.py` | Rarity, TF-IDF logistic, decision-tree, and Isolation Forest comparators |
+| `public_model.py` / `public_training.py` | Binary task views of the existing encoder and validation-only calibration |
+| `public_metrics.py` | Binary detection and binary-span metrics |
+| `public_reporting.py` | Compatible aggregate result tables and dependency-free SVG comparison charts |
